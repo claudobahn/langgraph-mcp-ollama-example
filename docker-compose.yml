@@ -1,0 +1,41 @@
+services:
+
+  ollama:
+    build:
+      context: ./ollama
+    container_name: ollama
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ./ollama_data:/root/.ollama
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:11434/api/tags" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  mcp-server:
+    container_name: mcp_server
+    build:
+      context: ./mcp-server
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:13744/health" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  client:
+    depends_on:
+      ollama:
+        condition: service_healthy
+      mcp-server:
+        condition: service_healthy
+    restart: no
+    tty: true
+    stdin_open: true
+    build:
+      context: ./client
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
